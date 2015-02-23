@@ -13,7 +13,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName }.
+    #cl_st { gui = GUIName, nick = "Unset" }.
 
 %% ---------------------------------------------------------------------------
 
@@ -47,8 +47,8 @@ loop(St, {msg_from_GUI, Channel, Msg}) ->
 %% Get current nick
 loop(St, whoami) ->
     % {"nick", St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
-
+	{St#cl_st.nick, St};
+	
 %% Change nick
 loop(St, {nick, Nick}) ->
     % {ok, St} ;
