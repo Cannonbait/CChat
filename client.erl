@@ -13,7 +13,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName }.
+    #cl_st { gui = GUIName, nick = "Unknown" }.
 
 %% ---------------------------------------------------------------------------
 
@@ -46,14 +46,13 @@ loop(St, {msg_from_GUI, Channel, Msg}) ->
 
 %% Get current nick
 loop(St, whoami) ->
-    % {"nick", St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+    {St#cl_st.nick, St} ;
+    
 
 %% Change nick
 loop(St, {nick, Nick}) ->
-    % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
-
+    {ok, St#cl_st{nick = Nick}} ;
+    
 %% Incoming message
 loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
     gen_server:call(list_to_atom(GUIName), {msg_to_GUI, Channel, Name++"> "++Msg}),
