@@ -52,7 +52,7 @@ loop(St, whoami) ->
 %% Change nick
 loop(St, {nick, Nick}) ->
     % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+	{ok, St#cl_st{nick=Nick}};
 
 %% Incoming message
 loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
