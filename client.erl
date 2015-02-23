@@ -22,7 +22,8 @@ initial_state(Nick, GUIName) ->
 %% Connect to server
 loop(St, {connect, Server}) ->
     % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+	shire ! {request, self(), {connect, St#cl_st.nick}},
+	{ok, St};
 
 %% Disconnect from server
 loop(St, disconnect) ->

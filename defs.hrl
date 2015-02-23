@@ -6,4 +6,4 @@
 % This record defines the structure of the server process.
 % It contains the following fields:
 %
--record(server_st, {}).
+-record(server_st, {connectedClients}).

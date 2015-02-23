@@ -4,7 +4,19 @@
 
 main(State) ->
     % TODO: Receive message, handle it, and loop
-    not_implemented.
+	receive
+		{request, From, Request} ->
+			{Response, NextState} = loop(State, Request),
+			From ! {response, Response},
+			main(NextState)
+	end.
 
 initial_state(ServerName) ->
-    #server_st{}.
+    #server_st{connectedClients=[]}.
+
+loop(State, {connect, Nick}) ->	
+	%T = State#server_st.connectedClients,
+	%NextState = State#server_st(connectedClients=[Nick|T]),
+	io:print("Client connected!"),	
+	{ok, State}.
+
