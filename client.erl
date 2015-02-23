@@ -13,7 +13,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName, nick = "Unset" }.
+    #cl_st { gui = GUIName, nick = "Unknown" }.
 
 %% ---------------------------------------------------------------------------
 
