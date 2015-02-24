@@ -12,7 +12,7 @@ main(State) ->
 	end.
 
 initial_state(ServerName) ->
-    #server_st{connectedClients=[]}.
+    #server_st{connectedClients=[], channels = []}.
 
 loop(State, {connect, {Nick, Id}}) ->	
 	%{Response, NextState}
@@ -26,6 +26,24 @@ loop(State, {disconnect, Id}) ->
 	ConnectedClients = State#server_st.connectedClients,
 	UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 	NextState = State#server_st{connectedClients = UpdatedClients},
-	{ok, NextState}.
+	{ok, NextState};
+
+
+%If trying to join room that does not exist
+loop(State, {join, {Id, Channel}}) ->
+	Search = case lists:keyfind(Channel, 1, State#server_st.channels) of
+		false ->
+			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
+			{ok, State#server_st{channels = NewChannels}};
+		_ ->
+			%Lägg till användaren i kanalen
+			Elem = lists:keyfind(Channel, 1, State#server_st.channels),
+			{Name, Users} = Elem,
+			CleanedChannels = lists:delete(Elem, State#server_st.channels),
+			NewUsers = [Id|Users],
+			NewChannel = {Name, NewUsers},
+			{ok, State#server_st{channels = [NewChannel|CleanedChannels]}}
+		end.
+	
 
 
