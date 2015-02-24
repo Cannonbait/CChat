@@ -44,7 +44,7 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		
 % Yell at user if he tries to connect when he is already connected
 loop(St, {connect, Server}) ->
-	{{error, user_already_connected, "You are already connected dumbass"}, St};
+	{{error, user_already_connected, "You are already connected"}, St};
 
 % Disconnect from server if already connected
 loop(St, disconnect) when St#cl_st.connected =/= false ->
@@ -54,7 +54,7 @@ loop(St, disconnect) when St#cl_st.connected =/= false ->
 
 % Yell at user if trying to disconnect when not connected
 loop(St, disconnect) ->
-	{{error, user_not_connected, "You are not connected dumbass"}, St};
+	{{error, user_not_connected, "You are not connected"}, St};
 
 % Join channel
 loop(St, {join, Channel}) ->
