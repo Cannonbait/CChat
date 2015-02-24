@@ -15,11 +15,15 @@ initial_state(ServerName) ->
     #server_st{connectedClients=[], channels = []}.
 
 loop(State, {connect, {Nick, Id}}) ->	
-	%{Response, NextState}
-
-	T = State#server_st.connectedClients,
-	NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
-	{ok, State};
+	%If nick is already present in connectedClients...
+	case lists:keyfind(Nick, 1, State#server_st.connectedClients) of 
+		false->
+			T = State#server_st.connectedClients,
+			NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
+			{ok, NextState};
+		_ ->
+			{user_already_connected, State}
+	end;
 
 loop(State, {disconnect, Id}) ->
 	% {Response, NextState}

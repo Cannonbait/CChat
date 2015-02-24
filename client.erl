@@ -35,8 +35,10 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 			true ->
 				ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
 				receive
-					{response, Response} ->
-						{ok, St#cl_st{connected = ServerAtom}}
+					{response, ok} ->
+						{ok, St#cl_st{connected = ServerAtom}};
+					{response, user_already_connected} ->
+						{{error, user_already_connected, "Name taken, change with /nick <username>"}, St}
 				after
 					1000 ->
 						{{error, server_not_reached, "Server timeout"}, St}
@@ -82,9 +84,13 @@ loop(St, whoami) ->
 	{St#cl_st.nick, St};
 	
 %% Change nick
-loop(St, {nick, Nick}) ->
+loop(St, {nick, Nick}) when St#cl_st.connected =:= false ->
     % {ok, St} ;
 	{ok, St#cl_st{nick=Nick}};
+
+%Change nick when connected to server
+loop(St, {nick, Nick}) ->
+	{{error, cant_change_nick_connected, "You can't change nick when connected to a server"}, St};
 
 %% Incoming message
 loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
