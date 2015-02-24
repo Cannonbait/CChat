@@ -29,18 +29,22 @@ initial_state(Nick, GUIName) ->
 %% Connect to server if unconnected to a server
 loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		
-		%TODO handle if atom created from Server is unregistered
-		%currently badarg
 		ServerAtom = list_to_atom(Server),
-		ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
-		receive
-			{response, Response} ->
-				{ok, St#cl_st{connected = ServerAtom}}
-		after
-			1000 ->
-				{{error, server_not_reached, "Server timeout"}, St}
-
+		RegisteredPids = registered(),
+		case lists:member(ServerAtom, RegisteredPids) of
+			true ->
+				ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
+				receive
+					{response, Response} ->
+						{ok, St#cl_st{connected = ServerAtom}}
+				after
+					1000 ->
+						{{error, server_not_reached, "Server timeout"}, St}
+				end;
+			_ ->
+				{{error, server_not_reached, "Could not connect to server"}, St}
 		end;
+
 		
 % Yell at user if he tries to connect when he is already connected
 loop(St, {connect, Server}) ->
