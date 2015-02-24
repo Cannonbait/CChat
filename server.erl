@@ -40,10 +40,28 @@ loop(State, {join, {Id, Channel}}) ->
 			Elem = lists:keyfind(Channel, 1, State#server_st.channels),
 			{Name, Users} = Elem,
 			CleanedChannels = lists:delete(Elem, State#server_st.channels),
-			NewUsers = [Id|Users],
-			NewChannel = {Name, NewUsers},
+			NewChannel = {Name, [Id|Users]},
 			{ok, State#server_st{channels = [NewChannel|CleanedChannels]}}
-		end.
+		end;
+
+%Recieve message from user
+loop(State, {message, {Nick, Id, Channel, Msg}}) ->
+	{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
+	{sendMessage(Users, {Channel, Nick, Msg, Id}), State}.
+
+
+
+
+sendMessage([], _) -> ok;
+sendMessage([H|T], {Channel, Name, Msg, H}) -> 
+	sendMessage(T, {Channel, Name, Msg, H});
+sendMessage([H|T], {Channel, Name, Msg, Id}) ->
+	H ! {message, {incoming_msg, Channel, Name, Msg}},
+	sendMessage(T, {Channel, Name, Msg, Id}).
+
+
+
+
 	
 
 

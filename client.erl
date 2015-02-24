@@ -8,7 +8,12 @@ main(State) ->
         {request, From, Ref, Request} ->
             {Response, NextState} = loop(State, Request),
             From ! {result, Ref, Response},
+            main(NextState);
+        {message, Info} ->
+            {Response, NextState} = loop(State, Info),
             main(NextState)
+
+
 		%{response, Response} ->
 
     end.
@@ -55,7 +60,6 @@ loop(St, disconnect) ->
 loop(St, {join, Channel}) ->
     St#cl_st.connected ! {request, self(), {join, {self(), Channel}}},
     {ok, St} ;
-    
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
@@ -64,8 +68,8 @@ loop(St, {leave, Channel}) ->
 
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
-    % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+    St#cl_st.connected ! {request, self(), {message, {St#cl_st.nick, self(), Channel, Msg}}},
+    {ok, St} ;
 
 %% Get current nick
 loop(St, whoami) ->
