@@ -53,8 +53,9 @@ loop(St, disconnect) ->
 
 % Join channel
 loop(St, {join, Channel}) ->
-    % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+    St#cl_st.connected ! {request, self(), {join, {self(), Channel}}},
+    {ok, St} ;
+    
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
