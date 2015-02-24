@@ -21,29 +21,35 @@ initial_state(Nick, GUIName) ->
 
 %% loop handles each kind of request from GUI
 
-%% Connect to server
+%% Connect to server if unconnected to a server
 loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		
 		%TODO handle if atom created from Server is unregistered
 		%currently badarg
-		list_to_atom(Server) ! {request, self(), {connect, St#cl_st.nick}},
+		ServerAtom = list_to_atom(Server),
+		ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
 		receive
 			{response, Response} ->
-				{ok, St#cl_st{connected = true}}
+				{ok, St#cl_st{connected = ServerAtom}}
 		after
 			1000 ->
 				{{error, server_not_reached, "Server timeout"}, St}
 
 		end;
 		
-
+% Yell at user if he tries to connect when he is already connected
 loop(St, {connect, Server}) ->
 	{{error, user_already_connected, "You are already connected dumbass"}, St};
 
-%% Disconnect from server
-loop(St, disconnect) ->
+% Disconnect from server if already connected
+loop(St, disconnect) when St#cl_st.connected =/= false ->
     % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+	St#cl_st.connected ! {request, self(), {disconnect, self()}},
+	{ok, St#cl_st{connected = false}};
+
+% Yell at user if trying to disconnect when not connected
+loop(St, disconnect) ->
+	{{error, user_not_connected, "You are not connected dumbass"}, St};
 
 % Join channel
 loop(St, {join, Channel}) ->

@@ -14,10 +14,18 @@ main(State) ->
 initial_state(ServerName) ->
     #server_st{connectedClients=[]}.
 
-loop(State, {connect, Nick}) ->	
+loop(State, {connect, {Nick, Id}}) ->	
 	%{Response, NextState}
 
-	%T = State#server_st.connectedClients,
-	%NextState = State#server_st(connectedClients=[Nick|T]),
-	{ok, State}.
+	T = State#server_st.connectedClients,
+	NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
+	{ok, State};
+
+loop(State, {disconnect, Id}) ->
+	% {Response, NextState}
+	ConnectedClients = State#server_st.connectedClients,
+	UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
+	NextState = State#server_st{connectedClients = UpdatedClients},
+	{ok, NextState}.
+
 
