@@ -9,21 +9,36 @@ main(State) ->
             {Response, NextState} = loop(State, Request),
             From ! {result, Ref, Response},
             main(NextState)
+		%{response, Response} ->
+
     end.
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName, nick = "Unknown" }.
+    #cl_st { gui = GUIName, nick = "Unknown", connected = false }.
 
 %% ---------------------------------------------------------------------------
 
 %% loop handles each kind of request from GUI
 
 %% Connect to server
+loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
+		
+		%TODO handle if atom created from Server is unregistered
+		%currently badarg
+		list_to_atom(Server) ! {request, self(), {connect, St#cl_st.nick}},
+		receive
+			{response, Response} ->
+				{ok, St#cl_st{connected = true}}
+		after
+			1000 ->
+				{{error, server_not_reached, "Server timeout"}, St}
+
+		end;
+		
+
 loop(St, {connect, Server}) ->
-    % {ok, St} ;
-	shire ! {request, self(), {connect, St#cl_st.nick}},
-	{ok, St};
+	{{error, user_already_connected, "You are already connected dumbass"}, St};
 
 %% Disconnect from server
 loop(St, disconnect) ->

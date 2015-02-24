@@ -15,8 +15,9 @@ initial_state(ServerName) ->
     #server_st{connectedClients=[]}.
 
 loop(State, {connect, Nick}) ->	
+	%{Response, NextState}
+
 	%T = State#server_st.connectedClients,
 	%NextState = State#server_st(connectedClients=[Nick|T]),
-	io:print("Client connected!"),	
 	{ok, State}.
 
