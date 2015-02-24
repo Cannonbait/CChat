@@ -20,7 +20,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName, nick = "Unknown", connected = false }.
+    #cl_st { gui = GUIName, nick = Nick, connected = false }.
 
 %% ---------------------------------------------------------------------------
 
