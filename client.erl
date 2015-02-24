@@ -63,8 +63,9 @@ loop(St, {join, Channel}) ->
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
-    % {ok, St} ;
-    {{error, not_implemented, "Not implemented"}, St} ;
+    St#cl_st.connected ! {request, self(), {leave, {self(), Channel}}},
+    {ok, St} ;
+    
 
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
