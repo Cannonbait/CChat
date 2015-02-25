@@ -27,10 +27,16 @@ loop(State, {connect, {Nick, Id}}) ->
 
 loop(State, {disconnect, Id}) ->
 	% {Response, NextState}
-	ConnectedClients = State#server_st.connectedClients,
-	UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
-	NextState = State#server_st{connectedClients = UpdatedClients},
-	{ok, NextState};
+	case userInChannels(State#server_st.channels, Id) of
+		false ->
+			ConnectedClients = State#server_st.connectedClients,
+			UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
+			NewState = State#server_st{connectedClients = UpdatedClients},
+			{ok, NewState};
+		_ ->
+			io:print("No dc"),
+			{leave_channels_first, State}
+	end;
 
 
 %If trying to join room that does not exist
@@ -76,6 +82,16 @@ sendMessage([H|T], {Channel, Name, Msg, Id}) ->
 	sendMessage(T, {Channel, Name, Msg, Id}).
 
 
+
+userInChannels([], _ ) -> false;
+userInChannels([{_, Users}|T], Id) ->
+	Result = [X || X <- Users, X =:= Id],
+	case Result of
+		[] ->
+			userInChannels(T, Id);
+		_ ->
+			true
+	end.
 
 
 	
