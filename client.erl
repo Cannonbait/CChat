@@ -48,7 +48,7 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 					3000 ->
 						{{error, server_not_reached, "Server timeout"}, St}
 				end;
-			_ ->
+			false ->
 				{{error, server_not_reached, "Could not connect to server"}, St}
 		end;
 
