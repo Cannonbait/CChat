@@ -72,7 +72,12 @@ loop(St, disconnect) ->
 % Join channel
 loop(St, {join, Channel}) ->
     St#cl_st.connected ! {request, self(), {join, {self(), Channel}}},
-    {ok, St} ;
+    receive
+        {response, user_already_joined} ->
+            {{error, user_already_joined, "You are already in channel"}, St};
+        {response, ok} ->
+            {ok, St}
+    end;
 
 %% Leave channel
 loop(St, {leave, Channel}) ->

@@ -45,12 +45,18 @@ loop(State, {join, {Id, Channel}}) ->
 			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
 			{ok, State#server_st{channels = NewChannels}};
 		_ ->
+
 			%Lägg till användaren i kanalen
 			Elem = lists:keyfind(Channel, 1, State#server_st.channels),
 			{Name, Users} = Elem,
-			CleanedChannels = lists:delete(Elem, State#server_st.channels),
-			NewChannel = {Name, [Id|Users]},
-			{ok, State#server_st{channels = [NewChannel|CleanedChannels]}}
+			case contains(Users, Id) of
+				false -> 
+					CleanedChannels = lists:delete(Elem, State#server_st.channels),
+					NewChannel = {Name, [Id|Users]},
+					{ok, State#server_st{channels = [NewChannel|CleanedChannels]}};
+				_ ->
+					{user_already_joined, State}
+				end
 		end;
 
 loop(State, {leave, {Id, Channel}}) ->
@@ -81,14 +87,19 @@ sendMessage([H|T], {Channel, Name, Msg, Id}) ->
 	sendMessage(T, {Channel, Name, Msg, Id}).
 
 
+contains(List, Element) -> 
+	case [X || X <- List, X =:= Element] of
+		[] -> false;
+		_ -> true
+	end.
+
 
 userInChannels([], _ ) -> false;
 userInChannels([{_, Users}|T], Id) ->
-	Result = [X || X <- Users, X =:= Id],
-	case Result of
-		[] ->
-			userInChannels(T, Id);
-		_ ->
+	case contains(Users, Id) of
+		false ->
+			contains(T, Id);
+		true ->
 			true
 	end.
 
