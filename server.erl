@@ -5,9 +5,9 @@
 main(State) ->
     % TODO: Receive message, handle it, and loop
 	receive
-		{request, From, Request} ->
+		{request, From, Ref, Request} ->
 			{Response, NextState} = loop(State, Request),
-			From ! {server_response, Response},
+			From ! {result, Ref, Response},
 			main(NextState)
 	end.
 

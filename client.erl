@@ -1,5 +1,6 @@
 -module(client).
 -export([main/1, initial_state/2]).
+-import(helper, [request/2, requestAsync/2]).
 -include_lib("./defs.hrl").
 
 %% Receive messages from GUI and handle them accordingly
@@ -33,14 +34,14 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		RegisteredPids = registered(),
 		case lists:member(ServerAtom, RegisteredPids) of
 			true ->
-				ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
+				requestAsync(ServerAtom, {connect, {St#cl_st.nick, self()}}),
 				receive
-					{server_response, {connect, ok}} ->
+					{result, Ref, {connect, ok}} ->
 						{ok, St#cl_st{connected = ServerAtom}};
-					{server_response, {connect, user_already_connected}} ->
+					{result, Ref, {connect, user_already_connected}} ->
 						{{error, user_already_connected, "Name taken, change with /nick <username>"}, St}
 				after
-					1000 ->
+					3000 ->
 						{{error, server_not_reached, "Server timeout"}, St}
 				end;
 			_ ->
@@ -55,11 +56,10 @@ loop(St, {connect, Server}) ->
 % Disconnect from server if already connected
 loop(St, disconnect) when St#cl_st.connected =/= false ->
     % {ok, St} ;
-	St#cl_st.connected ! {request, self(), {disconnect, self()}},
-    receive
-        {server_response, {disconnect, leave_channels_first}} ->
+    case request(St#cl_st.connected, {disconnect, self()}) of
+        {disconnect, leave_channels_first} ->
             {{error, leave_channels_first, "Leave your channels first"}, St};
-		{server_response, {disconnect, ok}} ->
+		{disconnect, ok} ->
             {ok, St#cl_st{connected = false}}
     end;
 	
@@ -70,31 +70,30 @@ loop(St, disconnect) ->
 
 % Join channel
 loop(St, {join, Channel}) ->
-    St#cl_st.connected ! {request, self(), {join, {self(), Channel}}},
-    receive
-        {server_response, {join, user_already_joined}} ->
+    case request(St#cl_st.connected, {join, {self(), Channel}}) of
+        {join, user_already_joined} ->
             {{error, user_already_joined, "You are already in channel"}, St};
-        {server_response, {join, ok}} ->
+        {join, ok} ->
             {ok, St}
     end;
+
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
-    St#cl_st.connected ! {request, self(), {leave, {self(), Channel}}},
-    receive
-        {server_response, {leave, user_not_joined}} ->
+    case request(St#cl_st.connected, {leave, {self(), Channel}}) of
+        {leave, user_not_joined} ->
             {{error, user_not_joined, "You did not join the channel"}, St};
-        {server_response, {leave, ok}} ->
+        {leave, ok} ->
             {ok, St}
     end;
 
+
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
-    St#cl_st.connected ! {request, self(), {message, {St#cl_st.nick, self(), Channel, Msg}}},
-    receive 
-        {server_response, {message, user_not_joined}} ->
-            {{error, user_not_joined, "You need to join channel"}, St};
-        {server_response, {message, ok}} ->
+    case request(St#cl_st.connected, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
+        {message, user_not_joined} ->
+            {{error, user_not_joined, "You need to join the channel"}, St};
+        {message, ok} ->
             {ok, St}
     end;
 
