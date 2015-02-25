@@ -11,31 +11,32 @@ main(State) ->
 	end.
 
 initial_state(ServerName) ->
+	%When the server is started we have no connected clients and no channels
     #server_st{connectedClients=[], channels = []}.
 
 
 %Internal functions
 
 loop(State, {connect, {Nick, Id}}) ->	
-	%If nick is already present in connectedClients...
 	case lists:keyfind(Nick, 1, State#server_st.connectedClients) of 
-		false->
+		false->		%If the Nick did not already exist add it to connected
 			T = State#server_st.connectedClients,
 			NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
 			{{connect, ok}, NextState};
-		_ ->
+		_ ->		%Return error if user is already connected with this nick
 			{{connect, user_already_connected}, State}
 	end;
 
 loop(State, {disconnect, Id}) ->
 	% {Response, NextState}
 	case userInChannels(State#server_st.channels, Id) of
-		false ->
+		false ->	%If the user is not in any channels
 			ConnectedClients = State#server_st.connectedClients,
+			%Create a list without the Client that is disconnecting
 			UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 			NewState = State#server_st{connectedClients = UpdatedClients},
 			{{disconnect, ok}, NewState};
-		_ ->
+		_ ->		%If the user has not left channels, return error
 			{{disconnect, leave_channels_first}, State}
 	end;
 
