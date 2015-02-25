@@ -32,7 +32,7 @@ loop(State, {disconnect, Id}) ->
 			ConnectedClients = State#server_st.connectedClients,
 			UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 			NewState = State#server_st{connectedClients = UpdatedClients},
-			{{disconnect, success}, NewState};
+			{{disconnect, ok}, NewState};
 		_ ->
 			{{disconnect, leave_channels_first}, State}
 	end;

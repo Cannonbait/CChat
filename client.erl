@@ -59,7 +59,7 @@ loop(St, disconnect) when St#cl_st.connected =/= false ->
     receive
         {server_response, {disconnect, leave_channels_first}} ->
             {{error, leave_channels_first, "Leave your channels first"}, St};
-		{server_response, {disconnect, success}}->
+		{server_response, {disconnect, ok}} ->
             {ok, St#cl_st{connected = false}}
     end;
 	
