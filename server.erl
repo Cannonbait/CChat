@@ -32,9 +32,8 @@ loop(State, {disconnect, Id}) ->
 			ConnectedClients = State#server_st.connectedClients,
 			UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 			NewState = State#server_st{connectedClients = UpdatedClients},
-			{ok, NewState};
+			{success, NewState};
 		_ ->
-			io:print("No dc"),
 			{leave_channels_first, State}
 	end;
 

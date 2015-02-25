@@ -58,12 +58,9 @@ loop(St, disconnect) when St#cl_st.connected =/= false ->
 	St#cl_st.connected ! {request, self(), {disconnect, self()}},
     receive
         {response, leave_channels_first} ->
-            io:print("Error"),
             {{error, leave_channels_first, "Leave your channels first"}, St};
-        {response, ok} ->
-            {ok, St#cl_st{connected = false}};
-        _ ->
-            io:print("Ehh")
+		{response, success}->
+            {ok, St#cl_st{connected = false}}
     end;
 
 	
