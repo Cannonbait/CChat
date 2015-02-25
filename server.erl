@@ -64,10 +64,16 @@ loop(State, {leave, {Id, Channel}}) ->
 		false ->
 			{ok, State};
 		_ ->
+
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
-			NewChannel = {Name, lists:delete(Id, Users)},
-			CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
-			{ok, State#server_st{channels = [NewChannel|CleanedChannels]}}
+			case contains(Users, Id) of
+				true ->
+					NewChannel = {Name, lists:delete(Id, Users)},
+					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
+					{ok, State#server_st{channels = [NewChannel|CleanedChannels]}};
+				_ ->
+					{user_not_joined, State}
+			end
 		end;
 
 

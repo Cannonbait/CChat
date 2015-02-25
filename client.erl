@@ -82,8 +82,12 @@ loop(St, {join, Channel}) ->
 %% Leave channel
 loop(St, {leave, Channel}) ->
     St#cl_st.connected ! {request, self(), {leave, {self(), Channel}}},
-    {ok, St} ;
-    
+    receive
+        {response, user_not_joined} ->
+            {{error, user_not_joined, "You did not join the channel"}, St};
+        {response, ok} ->
+            {ok, St}
+    end;
 
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
