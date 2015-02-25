@@ -50,25 +50,25 @@ loop(State, {join, {Id, Channel}}) ->
 			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
 			{{join, ok}, State#server_st{channels = NewChannels}};
 		_ ->			%Channel exists, add user 
-			
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 			case contains(Users, Id) of
-				false -> 
+				false -> %If user is not in channel
 					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
 					NewChannel = {Name, [Id|Users]},
 					{{join, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
-				true ->
+				true ->	%If user is already in channel, return error
 					{{join, user_already_joined}, State}
 				end
 		end;
 
+%User wants to leave a channel
 loop(State, {leave, {Id, Channel}}) ->
 	case lists:keyfind(Channel, 1, State#server_st.channels) of
-		false ->
+		false ->	%If channel does not exist
 			{{leave, ok}, State};
-		_ ->
-
+		_ ->		%
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
+			%If the channel contains the user
 			case contains(Users, Id) of
 				true ->
 					NewChannel = {Name, lists:delete(Id, Users)},
@@ -84,16 +84,18 @@ loop(State, {leave, {Id, Channel}}) ->
 loop(State, {message, {Nick, Id, Channel, Msg}}) ->
 	{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 	case contains(Users, Id) of
-		false ->
+		false ->	%If user is not in channel, return error
 			{{message, user_not_joined}, State};
 		true ->
+			%Spawn new process to send messages
 			spawn(server, sendMessage, [Users, {Channel, Nick, Msg, Id}]),
+			%Acknowledge that server recieved message and it will be sent out
 			{{message, ok}, State}
 	end.
 
 
 
-
+%Recursive function to send Message
 sendMessage([], _) -> ok;
 sendMessage([H|T], {Channel, Name, Msg, H}) -> 
 	sendMessage(T, {Channel, Name, Msg, H});
@@ -102,13 +104,14 @@ sendMessage([H|T], {Channel, Name, Msg, Id}) ->
 	sendMessage(T, {Channel, Name, Msg, Id}).
 
 
+%Finds out if a List contains an element
 contains(List, Element) -> 
 	case [X || X <- List, X =:= Element] of
 		[] -> false;
 		_ -> true
 	end.
 
-
+%Recursive function to find out if a user is within a channel
 userInChannels([], _ ) -> false;
 userInChannels([{_, Users}|T], Id) ->
 	case contains(Users, Id) of
