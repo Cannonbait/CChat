@@ -19,12 +19,12 @@ initial_state(ServerName) ->
 
 %User is attempting to connect to server
 loop(State, {connect, {Nick, Id}}) ->	
-	case lists:keyfind(Nick, 1, State#server_st.connectedClients) of 
+	case lists:keymember(Nick, 1, State#server_st.connectedClients) of 
 		false->		%If the Nick did not already exist add it to connected
 			T = State#server_st.connectedClients,
 			NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
 			{{connect, ok}, NextState};
-		_ ->		%Return error if user is already connected with this nick
+		true ->		%Return error if user is already connected with this nick
 			{{connect, user_already_connected}, State}
 	end;
 
@@ -45,11 +45,11 @@ loop(State, {disconnect, Id}) ->
 
 %User wants to join a room
 loop(State, {join, {Id, Channel}}) ->
-	case lists:keyfind(Channel, 1, State#server_st.channels) of
+	case lists:keymember(Channel, 1, State#server_st.channels) of
 		false ->		%If the channel does not exists, create it and add the user
 			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
 			{{join, ok}, State#server_st{channels = NewChannels}};
-		_ ->			%Channel exists, add user 
+		true ->			%Channel exists, add user 
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 			case contains(Users, Id) of
 				false -> %If user is not in channel
@@ -63,10 +63,10 @@ loop(State, {join, {Id, Channel}}) ->
 
 %User wants to leave a channel
 loop(State, {leave, {Id, Channel}}) ->
-	case lists:keyfind(Channel, 1, State#server_st.channels) of
+	case lists:keymember(Channel, 1, State#server_st.channels) of
 		false ->	%If channel does not exist
 			{{leave, ok}, State};
-		_ ->		%
+		true ->		%
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 			%If the channel contains the user
 			case contains(Users, Id) of
