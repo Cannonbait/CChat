@@ -1,9 +1,8 @@
 -module(server).
--export([main/1, initial_state/1]).
+-export([main/1, initial_state/1, sendMessage/2]).
 -include_lib("./defs.hrl").
 
 main(State) ->
-    % TODO: Receive message, handle it, and loop
 	receive
 		{request, From, Ref, Request} ->
 			{Response, NextState} = loop(State, Request),
@@ -13,6 +12,9 @@ main(State) ->
 
 initial_state(ServerName) ->
     #server_st{connectedClients=[], channels = []}.
+
+
+%Internal functions
 
 loop(State, {connect, {Nick, Id}}) ->	
 	%If nick is already present in connectedClients...
@@ -84,7 +86,8 @@ loop(State, {message, {Nick, Id, Channel, Msg}}) ->
 		false ->
 			{{message, user_not_joined}, State};
 		_ ->
-			{{message, sendMessage(Users, {Channel, Nick, Msg, Id})}, State}
+			spawn(server, sendMessage, [Users, {Channel, Nick, Msg, Id}]),
+			{{message, ok}, State}
 	end.
 
 
@@ -113,8 +116,3 @@ userInChannels([{_, Users}|T], Id) ->
 		true ->
 			true
 	end.
-
-
-	
-
-
