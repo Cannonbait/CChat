@@ -35,9 +35,9 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 			true ->
 				ServerAtom ! {request, self(), {connect, {St#cl_st.nick, self()}}},
 				receive
-					{response, ok} ->
+					{server_response, {connect, ok}} ->
 						{ok, St#cl_st{connected = ServerAtom}};
-					{response, user_already_connected} ->
+					{server_response, {connect, user_already_connected}} ->
 						{{error, user_already_connected, "Name taken, change with /nick <username>"}, St}
 				after
 					1000 ->
@@ -57,12 +57,11 @@ loop(St, disconnect) when St#cl_st.connected =/= false ->
     % {ok, St} ;
 	St#cl_st.connected ! {request, self(), {disconnect, self()}},
     receive
-        {response, leave_channels_first} ->
+        {server_response, {disconnect, leave_channels_first}} ->
             {{error, leave_channels_first, "Leave your channels first"}, St};
-		{response, success}->
+		{server_response, {disconnect, ok}} ->
             {ok, St#cl_st{connected = false}}
     end;
-
 	
 
 % Yell at user if trying to disconnect when not connected
@@ -73,9 +72,9 @@ loop(St, disconnect) ->
 loop(St, {join, Channel}) ->
     St#cl_st.connected ! {request, self(), {join, {self(), Channel}}},
     receive
-        {response, user_already_joined} ->
+        {server_response, {join, user_already_joined}} ->
             {{error, user_already_joined, "You are already in channel"}, St};
-        {response, ok} ->
+        {server_response, {join, ok}} ->
             {ok, St}
     end;
 
@@ -83,9 +82,9 @@ loop(St, {join, Channel}) ->
 loop(St, {leave, Channel}) ->
     St#cl_st.connected ! {request, self(), {leave, {self(), Channel}}},
     receive
-        {response, user_not_joined} ->
+        {server_response, {leave, user_not_joined}} ->
             {{error, user_not_joined, "You did not join the channel"}, St};
-        {response, ok} ->
+        {server_response, {leave, ok}} ->
             {ok, St}
     end;
 
@@ -93,9 +92,9 @@ loop(St, {leave, Channel}) ->
 loop(St, {msg_from_GUI, Channel, Msg}) ->
     St#cl_st.connected ! {request, self(), {message, {St#cl_st.nick, self(), Channel, Msg}}},
     receive 
-        {response, user_not_joined} ->
+        {server_response, {message, user_not_joined}} ->
             {{error, user_not_joined, "You need to join channel"}, St};
-        {response, ok} ->
+        {server_response, {message, ok}} ->
             {ok, St}
     end;
 
