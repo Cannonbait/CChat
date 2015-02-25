@@ -32,12 +32,16 @@ loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		
 		ServerAtom = list_to_atom(Server),
 		RegisteredPids = registered(),
+
 		case lists:member(ServerAtom, RegisteredPids) of
 			true ->
+				%Send a connect requist to server
 				requestAsync(ServerAtom, {connect, {St#cl_st.nick, self()}}),
 				receive
+					%If not connected but got response, update client state with connected server
 					{result, Ref, {connect, ok}} ->
 						{ok, St#cl_st{connected = ServerAtom}};
+					%If nickname is already present on the server, tell user to change nick
 					{result, Ref, {connect, user_already_connected}} ->
 						{{error, user_already_connected, "Name taken, change with /nick <username>"}, St}
 				after
@@ -56,9 +60,12 @@ loop(St, {connect, Server}) ->
 % Disconnect from server if already connected
 loop(St, disconnect) when St#cl_st.connected =/= false ->
     % {ok, St} ;
+	% Tell server to disconnect client
     case request(St#cl_st.connected, {disconnect, self()}) of
+		%If client is still on channels, tell user to leave channels first
         {disconnect, leave_channels_first} ->
             {{error, leave_channels_first, "Leave your channels first"}, St};
+		%Else if client succesfully connected, update client state
 		{disconnect, ok} ->
             {ok, St#cl_st{connected = false}}
     end;
@@ -70,9 +77,12 @@ loop(St, disconnect) ->
 
 % Join channel
 loop(St, {join, Channel}) ->
+	%Send request to join a channel
     case request(St#cl_st.connected, {join, {self(), Channel}}) of
+		%If client is already present in channel, then inform user that he is already in channel
         {join, user_already_joined} ->
             {{error, user_already_joined, "You are already in channel"}, St};
+		%User succesfully joined channel
         {join, ok} ->
             {ok, St}
     end;
@@ -80,9 +90,12 @@ loop(St, {join, Channel}) ->
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
+	%Send request to leave a channel
     case request(St#cl_st.connected, {leave, {self(), Channel}}) of
+		%If client isnt present in channel, inform client that it's not in the channel
         {leave, user_not_joined} ->
             {{error, user_not_joined, "You did not join the channel"}, St};
+		%Client succesfully left channel
         {leave, ok} ->
             {ok, St}
     end;
@@ -90,9 +103,12 @@ loop(St, {leave, Channel}) ->
 
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
+	%Send a text-message to a channel
     case request(St#cl_st.connected, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
+		%If sending text-message to channel client never joined, tell the user to join the channel
         {message, user_not_joined} ->
             {{error, user_not_joined, "You need to join the channel"}, St};
+		%Text-message succesfilly sent
         {message, ok} ->
             {ok, St}
     end;
