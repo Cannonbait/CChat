@@ -111,7 +111,7 @@ loop(St, {nick, Nick}) when St#cl_st.connected =:= false ->
 
 %Change nick when connected to server
 loop(St, {nick, Nick}) ->
-	{{error, cant_change_nick_connected, "You can't change nick when connected to a server"}, St};
+	{{error, user_already_connected, "You can't change nick when connected to a server"}, St};
 
 %% Incoming message
 loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
