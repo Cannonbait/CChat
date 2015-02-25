@@ -36,7 +36,7 @@ loop(State, {disconnect, Id}) ->
 			UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 			NewState = State#server_st{connectedClients = UpdatedClients},
 			{{disconnect, ok}, NewState};
-		_ ->		%If the user has not left channels, return error
+		true ->		%If the user has not left channels, return error
 			{{disconnect, leave_channels_first}, State}
 	end;
 
@@ -57,7 +57,7 @@ loop(State, {join, {Id, Channel}}) ->
 					CleanedChannels = lists:delete(Elem, State#server_st.channels),
 					NewChannel = {Name, [Id|Users]},
 					{{join, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
-				_ ->
+				true ->
 					{{join, user_already_joined}, State}
 				end
 		end;
@@ -74,7 +74,7 @@ loop(State, {leave, {Id, Channel}}) ->
 					NewChannel = {Name, lists:delete(Id, Users)},
 					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
 					{{leave, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
-				_ ->
+				false ->
 					{{leave, user_not_joined}, State}
 			end
 		end;
@@ -86,7 +86,7 @@ loop(State, {message, {Nick, Id, Channel, Msg}}) ->
 	case contains(Users, Id) of
 		false ->
 			{{message, user_not_joined}, State};
-		_ ->
+		true ->
 			spawn(server, sendMessage, [Users, {Channel, Nick, Msg, Id}]),
 			{{message, ok}, State}
 	end.
