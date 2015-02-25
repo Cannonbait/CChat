@@ -88,7 +88,12 @@ loop(St, {leave, Channel}) ->
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
     St#cl_st.connected ! {request, self(), {message, {St#cl_st.nick, self(), Channel, Msg}}},
-    {ok, St} ;
+    receive 
+        {response, user_not_joined} ->
+            {{error, user_not_joined, "You need to join channel"}, St};
+        {response, ok} ->
+            {ok, St}
+    end;
 
 %% Get current nick
 loop(St, whoami) ->

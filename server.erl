@@ -74,7 +74,12 @@ loop(State, {leave, {Id, Channel}}) ->
 %Recieve message from user
 loop(State, {message, {Nick, Id, Channel, Msg}}) ->
 	{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
-	{sendMessage(Users, {Channel, Nick, Msg, Id}), State}.
+	case contains(Users, Id) of
+		false ->
+			{user_not_joined, State};
+		_ ->
+			{sendMessage(Users, {Channel, Nick, Msg, Id}), State}
+	end.
 
 
 
