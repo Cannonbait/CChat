@@ -15,8 +15,9 @@ initial_state(ServerName) ->
     #server_st{connectedClients=[], channels = []}.
 
 
-%Internal functions
+%%%%%%%%%%%%%%%%%%%%%%%%%%%Internal functions
 
+%User is attempting to connect to server
 loop(State, {connect, {Nick, Id}}) ->	
 	case lists:keyfind(Nick, 1, State#server_st.connectedClients) of 
 		false->		%If the Nick did not already exist add it to connected
@@ -27,6 +28,7 @@ loop(State, {connect, {Nick, Id}}) ->
 			{{connect, user_already_connected}, State}
 	end;
 
+%User wants to disconnect from server
 loop(State, {disconnect, Id}) ->
 	% {Response, NextState}
 	case userInChannels(State#server_st.channels, Id) of
@@ -41,20 +43,18 @@ loop(State, {disconnect, Id}) ->
 	end;
 
 
-%If trying to join room that does not exist
+%User wants to join a room
 loop(State, {join, {Id, Channel}}) ->
-	Search = case lists:keyfind(Channel, 1, State#server_st.channels) of
-		false ->
+	case lists:keyfind(Channel, 1, State#server_st.channels) of
+		false ->		%If the channel does not exists, create it and add the user
 			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
 			{{join, ok}, State#server_st{channels = NewChannels}};
-		_ ->
-
-			%Lägg till användaren i kanalen
-			Elem = lists:keyfind(Channel, 1, State#server_st.channels),
-			{Name, Users} = Elem,
+		_ ->			%Channel exists, add user 
+			
+			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 			case contains(Users, Id) of
 				false -> 
-					CleanedChannels = lists:delete(Elem, State#server_st.channels),
+					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
 					NewChannel = {Name, [Id|Users]},
 					{{join, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
 				true ->
@@ -63,7 +63,7 @@ loop(State, {join, {Id, Channel}}) ->
 		end;
 
 loop(State, {leave, {Id, Channel}}) ->
-	Search = case lists:keyfind(Channel, 1, State#server_st.channels) of
+	case lists:keyfind(Channel, 1, State#server_st.channels) of
 		false ->
 			{{leave, ok}, State};
 		_ ->
