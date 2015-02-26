@@ -17,15 +17,9 @@ initial_state(Id) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 		INTERNAL
 
-
+%Put user in channel
 loop(State, {join, {Id}}) ->
-	Users = State#channel_st.users,
-	case lists:member(Id, Users) of
-		false -> %If user is not in channel
-			{{join, ok}, State#channel_st{users = lists:sort([Id| Users])}};
-		true ->	%If user is already in channel, return error
-			{{join, user_already_joined}, State}
-	end;
+	{{join, ok}, State#channel_st{users = lists:sort([Id| State#channel_st.users])}};
 
 %Recieve message from user
 loop(State, {message, {Nick, Id, Channel, Msg}}) ->
