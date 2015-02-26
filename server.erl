@@ -1,5 +1,5 @@
 -module(server).
--export([main/1, initial_state/1, sendMessage/2]).
+-export([main/1, initial_state/1]).
 -include_lib("./defs.hrl").
 
 main(State) ->
@@ -45,21 +45,17 @@ loop(State, {disconnect, Id}) ->
 
 %User wants to join a room
 loop(State, {join, {Id, Channel}}) ->
-	case lists:keymember(Channel, 1, State#server_st.channels) of
-		false ->		%If the channel does not exists, create it and add the user
-			NewChannels = [ {Channel, [Id]} | State#server_st.channels],
-			{{join, ok}, State#server_st{channels = NewChannels}};
-		true ->			%Channel exists, add user 
-			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
-			case contains(Users, Id) of
-				false -> %If user is not in channel
-					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
-					NewChannel = {Name, [Id|Users]},
-					{{join, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
-				true ->	%If user is already in channel, return error
-					{{join, user_already_joined}, State}
-				end
-		end;
+	ChannelAtom = list_to_atom(Channel),
+	io:fwrite("~p", [ChannelAtom]),
+	helper:start(ChannelAtom, channel:initial_state(), fun channel:main/1),
+	%helper:start(to_atom(ClientName), client:initial_state("user01", GUIName), fun client:main/1),
+	NewChannels = [ChannelAtom| State#server_st.channels],
+	{{join, ok}, State#server_st{channels = NewChannels}};
+
+
+    
+
+
 
 %User wants to leave a channel
 loop(State, {leave, {Id, Channel}}) ->
@@ -69,7 +65,7 @@ loop(State, {leave, {Id, Channel}}) ->
 		true ->		%
 			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
 			%If the channel contains the user
-			case contains(Users, Id) of
+			case lists:member(Id, Users) of
 				true ->
 					NewChannel = {Name, lists:delete(Id, Users)},
 					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
@@ -77,46 +73,17 @@ loop(State, {leave, {Id, Channel}}) ->
 				false ->
 					{{leave, user_not_joined}, State}
 			end
-		end;
-
-
-%Recieve message from user
-loop(State, {message, {Nick, Id, Channel, Msg}}) ->
-	{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
-	case contains(Users, Id) of
-		false ->	%If user is not in channel, return error
-			{{message, user_not_joined}, State};
-		true ->
-			%Spawn new process to send messages
-			spawn(server, sendMessage, [Users, {Channel, Nick, Msg, Id}]),
-			%Acknowledge that server recieved message and it will be sent out
-			{{message, ok}, State}
-	end.
+		end.
 
 
 
-%Recursive function to send Message
-sendMessage([], _) -> ok;
-sendMessage([H|T], {Channel, Name, Msg, H}) -> 
-	sendMessage(T, {Channel, Name, Msg, H});
-sendMessage([H|T], {Channel, Name, Msg, Id}) ->
-	H ! {message, {incoming_msg, Channel, Name, Msg}},
-	sendMessage(T, {Channel, Name, Msg, Id}).
-
-
-%Finds out if a List contains an element
-contains(List, Element) -> 
-	case [X || X <- List, X =:= Element] of
-		[] -> false;
-		_ -> true
-	end.
 
 %Recursive function to find out if a user is within a channel
 userInChannels([], _ ) -> false;
 userInChannels([{_, Users}|T], Id) ->
-	case contains(Users, Id) of
+	case lists:member(Id, Users) of
 		false ->
-			contains(T, Id);
+			lists:member(Id, T);
 		true ->
 			true
 	end.

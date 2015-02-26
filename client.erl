@@ -31,9 +31,7 @@ initial_state(Nick, GUIName) ->
 loop(St, {connect, Server}) when St#cl_st.connected =:= false ->
 		
 		ServerAtom = list_to_atom(Server),
-		RegisteredPids = registered(),
-
-		case lists:member(ServerAtom, RegisteredPids) of
+		case lists:member(ServerAtom, registered()) of
 			true ->
 				%Send a connect requist to server
 				requestAsync(ServerAtom, {connect, {St#cl_st.nick, self()}}),
@@ -77,41 +75,55 @@ loop(St, disconnect) ->
 
 % Join channel
 loop(St, {join, Channel}) ->
-	%Send request to join a channel
-    case request(St#cl_st.connected, {join, {self(), Channel}}) of
-		%If client is already present in channel, then inform user that he is already in channel
-        {join, user_already_joined} ->
-            {{error, user_already_joined, "You are already in channel"}, St};
-		%User succesfully joined channel
-        {join, ok} ->
-            {ok, St}
-    end;
+	ChannelAtom = list_to_atom(Channel),
+    case lists:member(ChannelAtom, registered()) of
+        true ->
+            case request(ChannelAtom, {join, {self()}}) of
+                {join, ok} ->
+                    {ok, St};
+                {join, user_already_joined} ->
+                    {{error, user_already_joined, "You have already joined this channel"}, St}
+            end;
+        false->
+            %Send request to create and join a channel
+            {Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
+            %The request should either throw exception or return ok
+            {Value, St}        
+        end;
 
 
 %% Leave channel
 loop(St, {leave, Channel}) ->
-	%Send request to leave a channel
-    case request(St#cl_st.connected, {leave, {self(), Channel}}) of
-		%If client isnt present in channel, inform client that it's not in the channel
-        {leave, user_not_joined} ->
-            {{error, user_not_joined, "You did not join the channel"}, St};
-		%Client succesfully left channel
-        {leave, ok} ->
-            {ok, St}
+    ChannelAtom = list_to_atom(Channel),
+    case lists:member(ChannelAtom, registered()) of
+        true ->
+            case request(ChannelAtom, {leave, {self()}}) of
+                {leave, ok} ->
+                    {ok, St};
+                {leave, user_not_joined} ->
+                    {{error, user_not_joined, "You did not join the channel"}, St}
+            end;
+        false ->
+            {{error, user_not_joined, "You did not join the channel"}, St}
     end;
 
 
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
-	%Send a text-message to a channel
-    case request(St#cl_st.connected, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
-		%If sending text-message to channel client never joined, tell the user to join the channel
-        {message, user_not_joined} ->
-            {{error, user_not_joined, "You need to join the channel"}, St};
-		%Text-message succesfilly sent
-        {message, ok} ->
-            {ok, St}
+    ChannelAtom = list_to_atom(Channel),
+    case lists:member(ChannelAtom, registered()) of
+        true ->
+            case request(ChannelAtom, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
+                {message, ok} ->
+                    {ok, St};
+                {message, user_not_joined} ->
+                    {{error, user_not_joined, "You did not join the channel"}, St}
+            end;
+        false ->
+            {{error, user_not_joined, "You did not join the channel"}, St}
     end;
+
+
 
 %% Get current nick
 loop(St, whoami) ->

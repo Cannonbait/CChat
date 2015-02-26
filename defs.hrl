@@ -7,3 +7,6 @@
 % It contains the following fields:
 %
 -record(server_st, {connectedClients, channels}).
+
+%Record for channels
+-record(channel_st, {users}).
