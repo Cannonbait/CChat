@@ -1,4 +1,4 @@
-all: gui.beam helper.beam lexgrm.beam cchat.beam server.beam client.beam
+all: gui.beam helper.beam lexgrm.beam cchat.beam server.beam client.beam channel.beam
 
 gui.beam: gui.erl helper.beam
 	erl -compile gui.erl
@@ -18,6 +18,9 @@ server.beam: server.erl defs.hrl helper.beam
 
 client.beam: client.erl defs.hrl lexgrm.beam helper.beam
 	erl -compile client.erl
+
+channel.beam: channel.erl defs.hrl helper.beam
+	erl -compile channel.erl
 
 # ----------------------------------------------------------------------------
 
