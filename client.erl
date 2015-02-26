@@ -1,6 +1,7 @@
 -module(client).
 -export([main/1, initial_state/2]).
 -import(helper, [request/2, requestAsync/2]).
+-import(ordset, [new/0]).
 -include_lib("./defs.hrl").
 
 %% Receive messages from GUI and handle them accordingly
@@ -21,7 +22,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName, nick = Nick, connected = false, channels = []}.
+    #cl_st { gui = GUIName, nick = Nick, connected = false, channels = ordsets:new()}.
 
 %% ---------------------------------------------------------------------------
 
@@ -56,16 +57,17 @@ loop(St, {connect, Server}) ->
 	{{error, user_already_connected, "You are already connected"}, St};
 
 % Disconnect from server if already connected
-loop(St, disconnect) when St#cl_st.connected =/= false, St#cl_st.channels =:= [] ->
+loop(St, disconnect) when St#cl_st.connected =/= false  ->
     % {ok, St} ;
 	% Tell server to disconnect client
-    request(St#cl_st.connected, {disconnect, self()}),
-    {ok, St#cl_st{connected = false}};
-	
-
-loop(St, disconnect) when St#cl_st.connected =/= false ->
-    {{error, leave_channels_first, "Leave your channels first"}, St};
-
+    Size = ordsets:size(St#cl_st.channels),
+    Value = if 
+        Size < 1 ->
+            request(St#cl_st.connected, {disconnect, self()}),
+            {ok, St#cl_st{connected = false}};
+        true ->
+            {{error, leave_channels_first, "Leave your channels first"}, St}
+    end;
 
 % Yell at user if trying to disconnect when not connected
 loop(St, disconnect) ->
@@ -76,7 +78,7 @@ loop(St, {join, Channel}) ->
 	ChannelAtom = list_to_atom(Channel),
 
 	%If client is already member of channel...
-	case lists:member(ChannelAtom, St#cl_st.channels) of 
+	case ordsets:is_element(ChannelAtom, St#cl_st.channels) of 
 		%Then tell user that he already joined the channel
 		true->
 			{{error, user_already_joined, "You have already joined this channel"}, St};
@@ -84,12 +86,12 @@ loop(St, {join, Channel}) ->
 		case lists:member(ChannelAtom, registered()) of
 			true ->
 				request(ChannelAtom, {join, {self()}}),
-				{ok, St#cl_st{channels = [ChannelAtom | St#cl_st.channels]}};
+				{ok, St#cl_st{channels = ordsets:add_element(ChannelAtom, St#cl_st.channels)}};
 			false->
 				%Send request to create and join a channel
 				{Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
 				%The request should either throw exception or return ok
-				{Value, St#cl_st{channels = [ChannelAtom | St#cl_st.channels]}}
+				{Value, St#cl_st{channels = ordsets:add_element(ChannelAtom, St#cl_st.channels)}}
 		  end
 	end;
 
@@ -97,11 +99,11 @@ loop(St, {join, Channel}) ->
 %% Leave channel
 loop(St, {leave, Channel}) ->
     ChannelAtom = list_to_atom(Channel),
-    case lists:member(ChannelAtom, St#cl_st.channels) of
+    case ordsets:is_element(ChannelAtom, St#cl_st.channels) of
 		%If I'm already in channel, remove me from channel
         true ->
             request(ChannelAtom, {leave, {self()}}),
-            {ok, St#cl_st{channels = lists:delete(ChannelAtom, St#cl_st.channels)}};  
+            {ok, St#cl_st{channels = ordsets:del_element(ChannelAtom, St#cl_st.channels)}};  
 		%Else I cant remove myself because I already joined
         false ->
             {{error, user_not_joined, "You did not join the channel"}, St}
@@ -111,7 +113,7 @@ loop(St, {leave, Channel}) ->
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
     ChannelAtom = list_to_atom(Channel),
-    case lists:member(ChannelAtom, St#cl_st.channels) of
+    case ordsets:is_element(ChannelAtom, St#cl_st.channels) of
         true ->
             request(ChannelAtom, {message, {St#cl_st.nick, self(), Channel, Msg}}),
             {ok, St};
