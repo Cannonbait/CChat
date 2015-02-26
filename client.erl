@@ -21,7 +21,7 @@ main(State) ->
 
 %% Produce initial state
 initial_state(Nick, GUIName) ->
-    #cl_st { gui = GUIName, nick = Nick, connected = false }.
+    #cl_st { gui = GUIName, nick = Nick, connected = false, channels = []}.
 
 %% ---------------------------------------------------------------------------
 
@@ -56,18 +56,16 @@ loop(St, {connect, Server}) ->
 	{{error, user_already_connected, "You are already connected"}, St};
 
 % Disconnect from server if already connected
-loop(St, disconnect) when St#cl_st.connected =/= false ->
+loop(St, disconnect) when St#cl_st.connected =/= false, St#cl_st.channels =:= [] ->
     % {ok, St} ;
 	% Tell server to disconnect client
-    case request(St#cl_st.connected, {disconnect, self()}) of
-		%If client is still on channels, tell user to leave channels first
-        {disconnect, leave_channels_first} ->
-            {{error, leave_channels_first, "Leave your channels first"}, St};
-		%Else if client succesfully connected, update client state
-		{disconnect, ok} ->
-            {ok, St#cl_st{connected = false}}
-    end;
+    request(St#cl_st.connected, {disconnect, self()}),
+    {ok, St#cl_st{connected = false}};
 	
+
+loop(St, disconnect) when St#cl_st.connected =/= false ->
+    {{error, leave_channels_first, "Leave your channels first"}, St};
+
 
 % Yell at user if trying to disconnect when not connected
 loop(St, disconnect) ->
@@ -80,7 +78,7 @@ loop(St, {join, Channel}) ->
         true ->
             case request(ChannelAtom, {join, {self()}}) of
                 {join, ok} ->
-                    {ok, St};
+                    {ok, St#cl_st{channels = [Channel | St#cl_st.channels]}};
                 {join, user_already_joined} ->
                     {{error, user_already_joined, "You have already joined this channel"}, St}
             end;
@@ -88,7 +86,7 @@ loop(St, {join, Channel}) ->
             %Send request to create and join a channel
             {Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
             %The request should either throw exception or return ok
-            {Value, St}        
+            {Value, St#cl_st{channels = [Channel | St#cl_st.channels]}}
         end;
 
 
@@ -99,7 +97,7 @@ loop(St, {leave, Channel}) ->
         true ->
             case request(ChannelAtom, {leave, {self()}}) of
                 {leave, ok} ->
-                    {ok, St};
+                    {ok, St#cl_st{channels = lists:delete(Channel, St#cl_st.channels)}};
                 {leave, user_not_joined} ->
                     {{error, user_not_joined, "You did not join the channel"}, St}
             end;
