@@ -25,7 +25,7 @@ loop(State, {connect, {Nick, Id}}) ->
 	case lists:keymember(Nick, 1, State#server_st.connectedClients) of 
 		false->		%If the Nick did not already exist add it to connected
 			T = State#server_st.connectedClients,
-			NextState = State#server_st{connectedClients=[{Nick, Id}|T]},
+			NextState = State#server_st{connectedClients=lists:sort([{Nick, Id}|T])},
 			{{connect, ok}, NextState};
 		true ->		%Return error if user is already connected with this nick
 			{{connect, user_already_connected}, State}

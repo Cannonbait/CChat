@@ -22,7 +22,7 @@ loop(State, {join, {Id}}) ->
 	Users = State#channel_st.users,
 	case lists:member(Id, Users) of
 		false -> %If user is not in channel
-			{{join, ok}, State#channel_st{users = [Id| Users]}};
+			{{join, ok}, State#channel_st{users = lists:sort([Id| Users])}};
 		true ->	%If user is already in channel, return error
 			{{join, user_already_joined}, State}
 	end;
