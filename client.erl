@@ -74,20 +74,29 @@ loop(St, disconnect) ->
 % Join channel
 loop(St, {join, Channel}) ->
 	ChannelAtom = list_to_atom(Channel),
-    case lists:member(ChannelAtom, registered()) of
-        true ->
-            case request(ChannelAtom, {join, {self()}}) of
-                {join, ok} ->
-                    {ok, St#cl_st{channels = [Channel | St#cl_st.channels]}};
-                {join, user_already_joined} ->
-                    {{error, user_already_joined, "You have already joined this channel"}, St}
-            end;
-        false->
-            %Send request to create and join a channel
-            {Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
-            %The request should either throw exception or return ok
-            {Value, St#cl_st{channels = [Channel | St#cl_st.channels]}}
-        end;
+
+	%If client is already member of channel...
+	case lists:member(ChannelAtom, St#cl_st.channels) of 
+		%Then tell user that he already joined the channel
+		true->
+			{{error, user_already_joined, "You have already joined this channel"}, St};
+		false->
+		%If 
+		case lists:member(ChannelAtom, registered()) of
+			true ->
+				case request(ChannelAtom, {join, {self()}}) of
+					{join, ok} ->
+						{ok, St#cl_st{channels = [Channel | St#cl_st.channels]}};
+					{join, user_already_joined} ->
+						{{error, user_already_joined, "You have already joined this channel"}, St}
+				end;
+			false->
+				%Send request to create and join a channel
+				{Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
+				%The request should either throw exception or return ok
+				{Value, St#cl_st{channels = [Channel | St#cl_st.channels]}}
+		  end
+	end;
 
 
 %% Leave channel
