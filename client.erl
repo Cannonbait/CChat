@@ -83,7 +83,7 @@ loop(St, {join, Channel}) ->
 		false->
 		case lists:member(ChannelAtom, registered()) of
 			true ->
-				requestAsync(ChannelAtom, {join, {self()}}),
+				request(ChannelAtom, {join, {self()}}),
 				{ok, St#cl_st{channels = [ChannelAtom | St#cl_st.channels]}};
 			false->
 				%Send request to create and join a channel
@@ -98,13 +98,11 @@ loop(St, {join, Channel}) ->
 loop(St, {leave, Channel}) ->
     ChannelAtom = list_to_atom(Channel),
     case lists:member(ChannelAtom, St#cl_st.channels) of
+		%If I'm already in channel, remove me from channel
         true ->
-            case request(ChannelAtom, {leave, {self()}}) of
-                {leave, ok} ->
-                    {ok, St#cl_st{channels = lists:delete(ChannelAtom, St#cl_st.channels)}};
-                {leave, user_not_joined} ->
-                    {{error, user_not_joined, "You did not join the channel"}, St}
-            end;
+            request(ChannelAtom, {leave, {self()}}),
+            {ok, St#cl_st{channels = lists:delete(ChannelAtom, St#cl_st.channels)}};  
+		%Else I cant remove myself because I already joined
         false ->
             {{error, user_not_joined, "You did not join the channel"}, St}
     end;
@@ -115,12 +113,8 @@ loop(St, {msg_from_GUI, Channel, Msg}) ->
     ChannelAtom = list_to_atom(Channel),
     case lists:member(ChannelAtom, St#cl_st.channels) of
         true ->
-            case request(ChannelAtom, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
-                {message, ok} ->
-                    {ok, St};
-                {message, user_not_joined} ->
-                    {{error, user_not_joined, "You did not join the channel"}, St}
-            end;
+            request(ChannelAtom, {message, {St#cl_st.nick, self(), Channel, Msg}}),
+            {ok, St};
         false ->
             {{error, user_not_joined, "You did not join the channel"}, St}
     end;
