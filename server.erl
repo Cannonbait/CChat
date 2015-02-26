@@ -4,6 +4,9 @@
 
 main(State) ->
 	receive
+		{request, From, Ref, {join, Value}} ->
+			join(From, Ref, Value),
+			main(State);
 		{request, From, Ref, Request} ->
 			{Response, NextState} = loop(State, Request),
 			From ! {result, Ref, Response},
@@ -35,11 +38,18 @@ loop(State, {disconnect, Id}) ->
 	%Create a list without the Client that is disconnecting
 	UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 	NewState = State#server_st{connectedClients = UpdatedClients},
-	{{disconnect, ok}, NewState};
+	{{disconnect, ok}, NewState}.
 
 
 %User wants to join a room
-loop(State, {join, {Id, Channel}}) ->
+join(From, Ref, {Id, Channel}) ->
 	ChannelAtom = list_to_atom(Channel),
-	helper:start(ChannelAtom, channel:initial_state(Id), fun channel:main/1),
-	{{join, ok}, State}.
+	case lists:member(list_to_atom(Channel), registered()) of
+		false ->
+			helper:start(ChannelAtom, channel:initial_state(Id), fun channel:main/1),
+			From ! {result, Ref, {join, ok}},
+			ok;
+		true ->
+			ChannelAtom ! {request, From, Ref, {join, {Id}}},
+			ok
+	end.
