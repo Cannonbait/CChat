@@ -97,7 +97,7 @@ loop(St, {join, Channel}) ->
 %% Leave channel
 loop(St, {leave, Channel}) ->
     ChannelAtom = list_to_atom(Channel),
-    case lists:member(ChannelAtom, registered()) of
+    case lists:member(ChannelAtom, St#cl_st.channels) of
         true ->
             case request(ChannelAtom, {leave, {self()}}) of
                 {leave, ok} ->
@@ -113,7 +113,7 @@ loop(St, {leave, Channel}) ->
 % Sending messages
 loop(St, {msg_from_GUI, Channel, Msg}) ->
     ChannelAtom = list_to_atom(Channel),
-    case lists:member(ChannelAtom, registered()) of
+    case lists:member(ChannelAtom, St#cl_st.channels) of
         true ->
             case request(ChannelAtom, {message, {St#cl_st.nick, self(), Channel, Msg}}) of
                 {message, ok} ->

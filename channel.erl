@@ -23,29 +23,15 @@ loop(State, {join, {Id}}) ->
 
 %Recieve message from user
 loop(State, {message, {Nick, Id, Channel, Msg}}) ->
-	case lists:member(Id, State#channel_st.users) of
-		false ->	%If user is not in channel, return error
-			{{message, user_not_joined}, State};
-		true ->
-			%Spawn new process to send messages
-			spawn(channel, sendMessage, [State#channel_st.users, {Channel, Nick, Msg, Id}]),
-			%Acknowledge that server recieved message and it will be sent out
-			{{message, ok}, State}
-	end;
+	%Spawn new process to send messages
+	spawn(channel, sendMessage, [State#channel_st.users, {Channel, Nick, Msg, Id}]),
+	%Acknowledge that server recieved message and it will be sent out
+	{{message, ok}, State};
 
 
 %User wants to leave a channel
 loop(State, {leave, {Id}}) ->
-	%If the channel contains the user
-	case lists:member(Id, State#channel_st.users) of
-		true ->
-			{{leave, ok}, State#channel_st{users = lists:delete(Id, State#channel_st.users)}};
-		false ->
-			{{leave, user_not_joined}, State}
-	end.
-
-
-
+	{{leave, ok}, State#channel_st{users = lists:delete(Id, State#channel_st.users)}}.
 
 %Recursive function to send Message
 sendMessage([], _) -> ok;
