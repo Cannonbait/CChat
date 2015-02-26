@@ -81,20 +81,15 @@ loop(St, {join, Channel}) ->
 		true->
 			{{error, user_already_joined, "You have already joined this channel"}, St};
 		false->
-		%If 
 		case lists:member(ChannelAtom, registered()) of
 			true ->
-				case request(ChannelAtom, {join, {self()}}) of
-					{join, ok} ->
-						{ok, St#cl_st{channels = [Channel | St#cl_st.channels]}};
-					{join, user_already_joined} ->
-						{{error, user_already_joined, "You have already joined this channel"}, St}
-				end;
+				requestAsync(ChannelAtom, {join, {self()}}),
+				{ok, St#cl_st{channels = [ChannelAtom | St#cl_st.channels]}};
 			false->
 				%Send request to create and join a channel
 				{Op, Value} = request(St#cl_st.connected, {join, {self(), Channel}}),
 				%The request should either throw exception or return ok
-				{Value, St#cl_st{channels = [Channel | St#cl_st.channels]}}
+				{Value, St#cl_st{channels = [ChannelAtom | St#cl_st.channels]}}
 		  end
 	end;
 
@@ -106,7 +101,7 @@ loop(St, {leave, Channel}) ->
         true ->
             case request(ChannelAtom, {leave, {self()}}) of
                 {leave, ok} ->
-                    {ok, St#cl_st{channels = lists:delete(Channel, St#cl_st.channels)}};
+                    {ok, St#cl_st{channels = lists:delete(ChannelAtom, St#cl_st.channels)}};
                 {leave, user_not_joined} ->
                     {{error, user_not_joined, "You did not join the channel"}, St}
             end;
