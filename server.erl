@@ -46,44 +46,16 @@ loop(State, {disconnect, Id}) ->
 %User wants to join a room
 loop(State, {join, {Id, Channel}}) ->
 	ChannelAtom = list_to_atom(Channel),
-	io:fwrite("~p", [ChannelAtom]),
-	helper:start(ChannelAtom, channel:initial_state(), fun channel:main/1),
+	helper:start(ChannelAtom, channel:initial_state(Id), fun channel:main/1),
 	%helper:start(to_atom(ClientName), client:initial_state("user01", GUIName), fun client:main/1),
 	NewChannels = [ChannelAtom| State#server_st.channels],
-	{{join, ok}, State#server_st{channels = NewChannels}};
+	{{join, ok}, State#server_st{channels = NewChannels}}.
 
-
-    
-
-
-
-%User wants to leave a channel
-loop(State, {leave, {Id, Channel}}) ->
-	case lists:keymember(Channel, 1, State#server_st.channels) of
-		false ->	%If channel does not exist
-			{{leave, ok}, State};
-		true ->		%
-			{Name, Users} = lists:keyfind(Channel, 1, State#server_st.channels),
-			%If the channel contains the user
-			case lists:member(Id, Users) of
-				true ->
-					NewChannel = {Name, lists:delete(Id, Users)},
-					CleanedChannels = lists:delete({Name, Users}, State#server_st.channels),
-					{{leave, ok}, State#server_st{channels = [NewChannel|CleanedChannels]}};
-				false ->
-					{{leave, user_not_joined}, State}
-			end
-		end.
 
 
 
 
 %Recursive function to find out if a user is within a channel
 userInChannels([], _ ) -> false;
-userInChannels([{_, Users}|T], Id) ->
-	case lists:member(Id, Users) of
-		false ->
-			lists:member(Id, T);
-		true ->
-			true
-	end.
+userInChannels([Channel|T], Id) ->
+	false.
