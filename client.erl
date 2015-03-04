@@ -1,6 +1,6 @@
 -module(client).
 -export([main/1, initial_state/2]).
--import(helper, [request/2, requestAsync/2]).
+-import(helper, [request/2, requestAsync/2, timeSince/1]).
 -import(ordset, [new/0]).
 -include_lib("./defs.hrl").
 
@@ -140,4 +140,29 @@ loop(St, {nick, Nick}) ->
 %% Incoming message
 loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
     gen_server:call(list_to_atom(GUIName), {msg_to_GUI, Channel, Name++"> "++Msg}),
-    {ok, St}.
+    {ok, St};
+
+%% Send ping request to another user via server 
+loop(St, {ping, Name}) ->
+	requestAsync(St#cl_st.connected, {ping, {self(), Name, now()}}),
+	{ok, St};
+
+%% Server tells client that ping failed
+loop(St, pingfail) ->
+	{{error, user_not_found, "No such user connected to server"}, St};
+	
+%% Send pong directly to client
+loop(St, {sendpong, {PongeePid, Nick, Time}}) ->
+	requestAsync(PongeePid, {pong, Nick, Time}),
+	{ok, St};
+
+%% Forward pong-response to GUI 
+loop(St, {pong, UserNick, Time}) ->
+	Diff = helper:timeSince(Time), 
+	gen_server:call(list_to_atom(St#cl_st.gui), {msg_to_SYSTEM, io_lib:format("Pong ~s: ~pms", [UserNick,Diff])}),
+	{ok, St}.
+
+
+
+
+

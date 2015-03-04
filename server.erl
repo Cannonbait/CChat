@@ -4,6 +4,11 @@
 
 main(State) ->
 	receive
+		{request, From, Ref, {ping, Data}} ->
+			%special-case where server shouldnt neccesarily
+			%respond back
+			loop(State, {ping, Data}),
+			main(State);
 		{request, From, Ref, {join, Value}} ->
 			join(From, Ref, Value),
 			main(State);
@@ -38,7 +43,19 @@ loop(State, {disconnect, Id}) ->
 	%Create a list without the Client that is disconnecting
 	UpdatedClients = [{Nick, ClientId} || {Nick, ClientId} <- ConnectedClients, ClientId =/= Id],
 	NewState = State#server_st{connectedClients = UpdatedClients},
-	{{disconnect, ok}, NewState}.
+	{{disconnect, ok}, NewState};
+
+%User wants to ping another user
+loop(State, {ping, {PongeePid, Name, Time}}) ->
+	case lists:keymember(Name, 1, State#server_st.connectedClients) of
+		true ->
+			{_, Id} = lists:keyfind(Name, 1, State#server_st.connectedClients),
+			helper:requestAsync(Id, {sendpong, {PongeePid, Name, Time}}),
+			{ok, State};
+		false ->
+			helper:requestAsync(PongeePid, pingfail),
+			{ok, State}
+	end.
 
 
 %User wants to join a room
