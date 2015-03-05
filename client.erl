@@ -142,10 +142,15 @@ loop(St = #cl_st { gui = GUIName }, {incoming_msg, Channel, Name, Msg}) ->
     gen_server:call(list_to_atom(GUIName), {msg_to_GUI, Channel, Name++"> "++Msg}),
     {ok, St};
 
+%% Send error message if ping attempted when not connected to a server
+loop(St, {ping, Name}) when St#cl_st.connected =:= false->
+    {{error, user_not_connected, "You are not connected to a server"}, St};
+
 %% Send ping request to another user via server 
 loop(St, {ping, Name}) ->
-	requestAsync(St#cl_st.connected, {ping, {self(), Name, now()}}),
-	{ok, St};
+    requestAsync(St#cl_st.connected, {ping, {self(), Name, now()}}),
+    {ok, St};
+
 
 %% Server tells client that ping failed
 loop(St, pingfail) ->
