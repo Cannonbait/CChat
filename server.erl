@@ -53,7 +53,7 @@ loop(State, {ping, {PongeePid, Name, Time}}) ->
 			helper:requestAsync(Id, {sendpong, {PongeePid, Name, Time}}),
 			{ok, State};
 		false ->
-			helper:requestAsync(PongeePid, pingfail),
+			helper:requestAsync(PongeePid, {pingfail, Name}),
 			{ok, State}
 	end.
 

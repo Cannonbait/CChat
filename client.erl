@@ -153,8 +153,9 @@ loop(St, {ping, Name}) ->
 
 
 %% Server tells client that ping failed
-loop(St, pingfail) ->
-	{{error, user_not_found, "No such user connected to server"}, St};
+loop(St, {pingfail, UserNick}) ->
+    gen_server:call(list_to_atom(St#cl_st.gui), {msg_to_SYSTEM, io_lib:format("Ping to ~s failed", [UserNick])}),
+    {ok, St};
 	
 %% Send pong directly to client
 loop(St, {sendpong, {PongeePid, Nick, Time}}) ->
